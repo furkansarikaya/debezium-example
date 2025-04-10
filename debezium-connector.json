@@ -1,0 +1,20 @@
+{
+  "name": "transfer-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "host.docker.internal",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "1",
+    "database.dbname": "TransferDb",
+    "database.server.name": "postgres",
+    "table.include.list": "public.transfers",
+    "topic.prefix": "postgres",
+    "plugin.name": "pgoutput",
+    "transforms": "route",
+    "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
+    "transforms.route.regex": "([^.]+)\\.([^.]+)\\.([^.]+)",
+    "transforms.route.replacement": "transfer-events"
+  }
+} 
