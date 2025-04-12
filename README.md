@@ -369,3 +369,67 @@ public class TransferEntity
 │       └── Infrastructure/      # Paylaşılan altyapı
 │           └── RedisService.cs  # Redis servis sınıfı
 ``` 
+
+## Commit Kuralları
+
+Bu projede [Conventional Commits](https://www.conventionalcommits.org/) standardı kullanılmaktadır. Her commit mesajı aşağıdaki formatta olmalıdır:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Commit Tipleri
+
+- `feat`: Yeni bir özellik eklendiğinde
+- `fix`: Bir hata düzeltildiğinde
+- `docs`: Sadece dokümantasyon değişikliklerinde
+- `style`: Kod formatlaması, noktalı virgül eksikleri vb. (kod değişikliği yok)
+- `refactor`: Kod refaktörü yapıldığında
+- `test`: Test eklendiğinde, test düzeltildiğinde veya değiştirildiğinde
+- `chore`: Yapılandırma değişiklikleri, bağımlılık güncellemeleri vb.
+- `perf`: Performans iyileştirmeleri
+- `ci`: CI/CD yapılandırma değişiklikleri
+- `build`: Build sisteminde veya harici bağımlılıklarda değişiklikler
+
+### Örnekler
+
+```bash
+# Yeni özellik
+feat(api): transfer oluşturma endpoint'i eklendi
+
+# Hata düzeltme
+fix(sync): kafka bağlantı hatası düzeltildi
+
+# Dokümantasyon
+docs: README dosyası güncellendi
+
+# Refaktör
+refactor(write): transfer servisi yeniden yapılandırıldı
+
+# Test
+test(read): redis cache testleri eklendi
+
+# Breaking change
+feat(api)!: transfer API'si v2'ye güncellendi
+
+# Birden fazla scope
+feat(api,db): transfer sistemi yenilendi
+```
+
+### Breaking Changes
+
+Breaking change olduğunda, commit mesajında ünlem işareti (`!`) kullanılmalı veya footer'da `BREAKING CHANGE:` ile açıklama eklenmelidir:
+
+```bash
+feat(api)!: transfer request/response modeli değiştirildi
+
+# veya
+
+feat(api): transfer endpoint'leri güncellendi
+
+BREAKING CHANGE: Transfer request modeli değiştirildi, önceki versiyonlar artık desteklenmiyor
+``` 

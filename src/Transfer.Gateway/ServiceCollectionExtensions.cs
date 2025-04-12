@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Transfer.Gateway.Extensions;
 
 namespace Transfer.Gateway;
