@@ -11,7 +11,7 @@ public class RedisService
 
     public RedisService(IConfiguration configuration)
     {
-        var connectionString = $"{configuration["RedisSettings:Host"]}:{configuration["RedisSettings:Port"]},password={configuration["RedisSettings:Password"]}";
+        var connectionString = $"{configuration["RedisSettings:Host"]}:{configuration["RedisSettings:Port"]},password={configuration["RedisSettings:Password"]},abortConnect=false";
         var redis = ConnectionMultiplexer.Connect(connectionString);
         _redis = redis.GetDatabase();
     }

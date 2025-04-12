@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
+using Transfer.Shared.Parser;
 
 namespace Transfer.Shared.Models;
 
@@ -25,36 +26,6 @@ public class DebeziumTransferDto
     /// </summary>
     public TransferEntity ToEntity()
     {
-        decimal amount = 0;
-
-        // Base64 olarak kodlanmış miktarı parse et
-        if (!string.IsNullOrEmpty(AmountRaw))
-        {
-            try
-            {
-                // Base64 encoded bytes'ı decode et
-                byte[] bytes = Convert.FromBase64String(AmountRaw);
-
-                // Big-endian olarak integer değeri elde et (Debezium böyle yollar)
-                Array.Reverse(bytes); // Eğer little-endian sistemde çalışıyorsan bunu yapabilirsin
-
-                int unscaledValue = BitConverter.ToInt16(bytes, 0); // 500
-
-                // Debezium schema'da scale: 2
-                int scale = 2;
-
-                amount = unscaledValue / (decimal)Math.Pow(10, scale);
-
-                Console.WriteLine($"Generic decode: {amount}");
-            }
-            catch (Exception ex)
-            {
-                // Hata durumunda loglama
-                Console.WriteLine($"Amount dönüşüm hatası: {ex.Message}");
-                Console.WriteLine($"Amount raw value: {AmountRaw}");
-            }
-        }
-
         DateTime createdAtDate = DateTime.UtcNow;
         if (!string.IsNullOrEmpty(CreatedAt))
         {
@@ -70,7 +41,6 @@ public class DebeziumTransferDto
             Id = Id,
             FromAccount = FromAccount,
             ToAccount = ToAccount,
-            Amount = amount,
             CreatedAt = createdAtDate,
             Description = Description
         };

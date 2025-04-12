@@ -1,7 +1,9 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Confluent.Kafka;
 using Transfer.Shared.Infrastructure;
 using Transfer.Shared.Models;
+using Transfer.Shared.Parser;
 
 namespace Transfer.Sync.Service;
 
@@ -51,8 +53,8 @@ public class TransferSyncService : BackgroundService
                     var consumeResult = _consumer.Consume(TimeSpan.FromSeconds(1));
                     if (consumeResult?.Message?.Value != null)
                     {
+                        _currentRawMessage = consumeResult.Message.Value; // Ham mesajı geçici olarak sakla
                         _logger.LogInformation("Kafka mesajı alındı: {Value}", consumeResult.Message.Value);
-                        
                         // JSON mesajını doğrudan Debezium modeline deserialize et
                         var debeziumMessage = JsonSerializer.Deserialize<DebeziumMessage>(consumeResult.Message.Value);
                         
@@ -102,24 +104,14 @@ public class TransferSyncService : BackgroundService
                 case "r": // Read
                     if (payload.After != null)
                     {
-                        // DTO'yu Entity'ye dönüştür
-                        var transferEntity = payload.After.ToEntity();
-                        
-                        await _redisService.SetTransferAsync(transferEntity);
-                        _logger.LogInformation("Transfer eklendi (ID: {Id}, Amount: {Amount})", 
-                            transferEntity.Id, transferEntity.Amount);
+                        await ProcessTransferEntityAsync(payload);
                     }
                     break;
                     
                 case "u": // Update
                     if (payload.After != null)
                     {
-                        // DTO'yu Entity'ye dönüştür
-                        var transferEntity = payload.After.ToEntity();
-                        
-                        await _redisService.SetTransferAsync(transferEntity);
-                        _logger.LogInformation("Transfer güncellendi (ID: {Id}, Amount: {Amount})", 
-                            transferEntity.Id, transferEntity.Amount);
+                        await ProcessTransferEntityAsync(payload);
                     }
                     break;
                     
@@ -142,6 +134,40 @@ public class TransferSyncService : BackgroundService
         }
     }
     
+    private async Task ProcessTransferEntityAsync(DebeziumPayload payload)
+    {
+        if (payload.After == null) return;
+        
+        try
+        {
+            // DTO'yu Entity'ye dönüştür
+            var transferEntity = payload.After.ToEntity();
+            
+            // Orijinal JSON mesajını parse et ve amount için kullan
+            var rawMessage = JsonSerializer.Deserialize<JsonNode>(_currentRawMessage);
+            if (rawMessage != null)
+            {
+                transferEntity.Amount = DebeziumDecimalParser.ParseAmount(rawMessage);
+                await _redisService.SetTransferAsync(transferEntity);
+                
+                string operation = payload.Op == "c" || payload.Op == "r" ? "eklendi" : "güncellendi";
+                _logger.LogInformation("Transfer {Operation} (ID: {Id}, Amount: {Amount})", 
+                    operation, transferEntity.Id, transferEntity.Amount);
+            }
+            else
+            {
+                _logger.LogWarning("JSON mesajı parse edilemedi");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Transfer işlenirken hata oluştu: {Message}", ex.Message);
+        }
+    }
+    
+    // Geçici olarak ham JSON mesajı saklamak için alan
+    private string _currentRawMessage = string.Empty;
+
     private async Task EnsureTopicExistsAsync()
     {
         try
