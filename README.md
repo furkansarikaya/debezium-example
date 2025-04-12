@@ -126,10 +126,10 @@ public class TransferEntity
 
 ## Servis Endpoint'leri
 
-- **Transfer.Gateway**: http://localhost:5045
-  - Swagger UI: http://localhost:5045/swagger
-  - Write API Proxy: http://localhost:5045/proxy-write
-  - Read API Proxy: http://localhost:5045/proxy-read
+- **Transfer.Gateway**: http://localhost:5000
+  - Swagger UI: http://localhost:5000/swagger
+  - Write API Proxy: http://localhost:5000/proxy-write
+  - Read API Proxy: http://localhost:5000/proxy-read
 
 - **Transfer.API.Write**: http://localhost:5077
   - Swagger UI: http://localhost:5077/swagger
@@ -164,6 +164,19 @@ public class TransferEntity
     "Host": "localhost",
     "Port": 6380,
     "Password": "R3d1s_Super_Secure_P@ssw0rd!"
+  }
+}
+```
+
+### Kafka Bağlantısı (Transfer.Sync)
+
+```json
+{
+  "KafkaSettings": {
+    "BootstrapServers": "localhost:9092",
+    "GroupId": "transfer-sync-group-dev",
+    "AutoOffsetReset": "Earliest",
+    "TopicName": "transfer-events"
   }
 }
 ```
@@ -229,7 +242,12 @@ public class TransferEntity
     "transforms": "route",
     "transforms.route.type": "org.apache.kafka.connect.transforms.RegexRouter",
     "transforms.route.regex": "([^.]+)\\.([^.]+)\\.([^.]+)",
-    "transforms.route.replacement": "transfer-events"
+    "transforms.route.replacement": "transfer-events",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "transforms.filter.condition": "value.op == 'c' || value.op == 'u' || value.op == 'd'"
   }
 }
 ```
