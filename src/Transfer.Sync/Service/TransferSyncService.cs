@@ -11,19 +11,22 @@ public class TransferSyncService : BackgroundService
     private readonly IConsumer<Ignore, string> _consumer;
     private readonly ILogger<TransferSyncService> _logger;
     private readonly IConfiguration _configuration;
-    private const string _topicName = "transfer-events";
+    private readonly string _topicName;
 
     public TransferSyncService(RedisService redisService, ILogger<TransferSyncService> logger, IConfiguration configuration)
     {
         _redisService = redisService;
         _logger = logger;
         _configuration = configuration;
+        _topicName = _configuration["KafkaSettings:TopicName"] ?? "transfer-events";
 
         var config = new ConsumerConfig
         {
-            BootstrapServers = "localhost:9092",
-            GroupId = "transfer-sync-group",
-            AutoOffsetReset = AutoOffsetReset.Earliest
+            BootstrapServers = _configuration["KafkaSettings:BootstrapServers"] ?? "localhost:9092",
+            GroupId = _configuration["KafkaSettings:GroupId"] ?? "transfer-sync-group",
+            AutoOffsetReset = Enum.TryParse<AutoOffsetReset>(_configuration["KafkaSettings:AutoOffsetReset"], out var offsetReset) 
+                ? offsetReset 
+                : AutoOffsetReset.Earliest
         };
 
         _consumer = new ConsumerBuilder<Ignore, string>(config).Build();
@@ -143,7 +146,9 @@ public class TransferSyncService : BackgroundService
     {
         try
         {
-            using (var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = "localhost:9092" }).Build())
+            var bootstrapServers = _configuration["KafkaSettings:BootstrapServers"] ?? "localhost:9092";
+            
+            using (var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = bootstrapServers }).Build())
             {
                 var metadata = adminClient.GetMetadata(TimeSpan.FromSeconds(10));
                 var topicExists = metadata.Topics.Any(t => t.Topic.Equals(_topicName, StringComparison.OrdinalIgnoreCase));
