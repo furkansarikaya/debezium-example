@@ -2,6 +2,73 @@
 
 Bu proje, para transferi işlemlerini yöneten ve Change Data Capture (CDC) teknolojisi kullanan bir mikroservis mimarisidir. Proje CQRS (Command Query Responsibility Segregation) ve Event Sourcing prensiplerine dayanarak tasarlanmıştır.
 
+## Mimari Diyagramı
+
+```mermaid
+graph TD;
+    subgraph Client["🌐 Client"]
+        A[HTTP Request];
+    end;
+
+    subgraph Gateway["🔀 Transfer.Gateway"]
+        B[YARP Reverse Proxy];
+        SW[Swagger UI];
+    end;
+
+    subgraph WriteAPI["✍️ Transfer.API.Write"]
+        WC[Transfer Controller];
+        DB[(PostgreSQL)];
+    end;
+
+    subgraph CDC["📊 Change Data Capture"]
+        DZ[Debezium Connector];
+        KF[Kafka Topic: transfer-events];
+    end;
+
+    subgraph SyncService["🔄 Transfer.Sync"]
+        KC[Kafka Consumer];
+        RS[Redis Sync Service];
+    end;
+
+    subgraph ReadAPI["📖 Transfer.API.Read"]
+        RC[Transfer Controller];
+        RD[(Redis Cache)];
+    end;
+
+    %% Flow
+    A -->|HTTP| B;
+    B -->|Write Request| WC;
+    WC -->|Save| DB;
+    DB -->|CDC Events| DZ;
+    DZ -->|Publish| KF;
+    KF -->|Consume| KC;
+    KC -->|Sync| RS;
+    RS -->|Update| RD;
+    B -->|Read Request| RC;
+    RC -->|Query| RD;
+
+    %% Swagger
+    SW -.->|API Docs| WC;
+    SW -.->|API Docs| RC;
+
+    %% Styles
+    classDef client fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#01579b;
+    classDef gateway fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#2e7d32;
+    classDef writeApi fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#7b1fa2;
+    classDef database fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,color:#ef6c00;
+    classDef cdc fill:#fff8e1,stroke:#ffa000,stroke-width:2px,color:#ffa000;
+    classDef sync fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px,color:#3f51b5;
+    classDef readApi fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#c2185b;
+
+    class A client;
+    class B,SW gateway;
+    class WC writeApi;
+    class DB,RD database;
+    class DZ,KF cdc;
+    class KC,RS sync;
+    class RC readApi;
+```
+
 ## Mimari Bileşenler
 
 Proje dört ana servisten oluşmaktadır:
